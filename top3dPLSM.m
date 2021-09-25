@@ -1,7 +1,5 @@
 %Usage example top3dPLSM(12,6,6,0.3)
 function top3dPLSM(nelx,nely,nelz,volfrac)
-%clear;clc;clf;
-%nelx = 24;nely = 16;nelz = 8;volfrac = 0.3;
 %%  Inicializacion de la funcion level set
 r = nely*0.1;%RADIUS OF INITIAL HOLES
 hX = repmat(nelx*[repmat([1/6,5/6],1,3),repmat([0,1/3,2/3,1],1,2),1/2],[1,3]);
@@ -20,33 +18,16 @@ Phi = Phi0;
 %%  Inicializacion de la funcion de base radial
 cRBF = 1e-5;
 nNode = (nelx +1)*(nely+1)*(nelz+1);
-% 
-% Ax = abs(bsxfun(@minus, X(:),X(:)'));
-% Ay = abs(bsxfun(@minus, Y(:),Y(:)'));
-% Az = abs(bsxfun(@minus, Z(:),Z(:)'));
-
 Ax = (bsxfun(@minus, X(:),X(:)'));
 Ay = (bsxfun(@minus, Y(:),Y(:)'));
 Az = (bsxfun(@minus, Z(:),Z(:)'));
-% Ax = X(:) - X(:)';
-% Ay = Y(:) - Y(:)';
-% Az = Z(:) - Z(:)';
-%cRBF = rand;
+
 A = sqrt(Ax.^2+Ay.^2+Az.^2+cRBF^2); % Multi cuadratica %correcion (-) por (+)
-%A = (Ax.^3+Ay.^3+Az.^3);
-%r = (sqrt(Ax.^2+Ay.^2+Az.^2+cRBF^2));
-%A = (Ax+Ay+Az).*log(Ax+Ay+Az);
-%A = abs(Ax+Ay+Az);
-%A = ((Ax+Ay+Az).^2).*log(abs(Ax+Ay+Az)); %Thin Plate Spline. No funciona.
-%A = exp(-1*((Ax+Ay+Az).^2)); % Gaussiana No funciona
 G = [A,ones(nNode,1),X(:),Y(:),Z(:);[ones(1,nNode);X(:)';Y(:)';Z(:)'],zeros(4,4)];
 pGpX = [Ax./A,repmat([0,1,0,0],nNode,1);repmat([0;1;0;0],1,nNode),zeros(4,4)];
 pGpY = [Ay./A,repmat([0,0,1,0],nNode,1);repmat([0;0;1;0],1,nNode),zeros(4,4)];
 pGpZ = [Az./A,repmat([0,0,0,1],nNode,1);repmat([0;0;0;1],1,nNode),zeros(4,4)];
-%pG = gradient(G,[X,Y,Z]);
 Alpha = G\[Phi(:);0;0;0;0];
-%Alpha = inv(G)*[Phi(:);0;0;0;0];
-%%  Definicion de condiciones de borde Liu Tovar
 %USER-DEFINED LOAD DOFs
 il = nelx; jl = nely/2; kl = 0:nelz;                         % Coordinates*
 loadnid = kl*(nelx+1)*(nely+1)+il*(nely+1)+(nely+1-jl); % Node IDs*
@@ -63,10 +44,6 @@ edofMat = kron(eleNode,[3,3,3])+repmat([-2,-1,0],nelx*nely*nelz,8);
 iK = reshape(kron(edofMat,ones(24,1))',24*24*nelx*nely*nelz,1);
 jK = reshape(kron(edofMat,ones(1,24))',24*24*nelx*nely*nelz,1);
 %  Defincion de condiciones de borde
-% F = sparse(3*((nely+1)*(nelx+1)*((nelz+2)/2))-(3*(nely/2))-1,1,-100,3*nNode,1);%NODAL LOADS
-% fixeddofs = retrieveFixeddofs(nelx,nely,nelz);
-% freedofs = setdiff(1:3*nNode,fixeddofs);
-% U = zeros(3*nNode,1);
 nele = nelx*nely*nelz;%
 ndof = 3*(nelx+1)*(nely+1)*(nelz+1);%
 F = sparse(loaddof,1,-1,ndof,1);%
@@ -129,23 +106,9 @@ for iT = 1:nLoop
   eleCompLRUD = ([eleCompLR;eleCompLR(end,:,:)]+[eleCompLR(1,:,:);eleCompLR]);
   nodeComp = (cat(3,eleCompLRUD(:,:,1),eleCompLRUD)+cat(3,eleCompLRUD,eleCompLRUD(:,:,end)))/8;
   
-  %eleComp = reshape(eleComp,nely,nelx,nelz);
-  
-%   eleCompLRUD = ([eleComp;eleComp(end,:,:)]+[eleComp(1,:,:);eleComp]);
-%   eleCompLR = ([eleCompLRUD(:,1,:), eleCompLRUD] + [eleCompLRUD, eleCompLRUD(:,end,:)]);
-%   nodeComp = (cat(3,eleCompLR(:,:,1),eleCompLR)+cat(3,eleCompLR,eleCompLR(:,:,end)))/8;
-
-  
-%M = scatteredInterpolant(x(:),y(:),z(:),eleComp(:),'linear','linear');  
-%  nodeComp = M(X,Y,Z);
-  %nodeComp = (nodeComp1 + nodeComp)./2;
-  %nodeComp1 = reshape(nodeComp1,nely+1,nelx+1,nelz+1);
   B = (nodeComp(:)/median(nodeComp(:))-lag).*DeltaPhi(:)*delta/0.75; %original
   %B = (nodeComp(:)/median(nodeComp(:))-lag);
   B = [B;0;0;0;0];
-  %B = B.*(abs(gradG.*Alpha));
-  %B = (nodeComp(:)-lag).*DeltaPhi(:)*delta/0.75;
-  %figure(3);clf;isosurface(X,Y,Z,nodeComp);
   Alpha = Alpha+dt*(G\B);
   sumAlpha(iT) = sum(Alpha);
   sumAlphaX(iT)=sum(Alpha.*[X(:);0;0;0;0]);
@@ -157,7 +120,6 @@ for iT = 1:nLoop
   subplot(4,1,3); plot(sumAlphaY(1:iT),'-'); title('Sum(Alpha*Y)'); 
   subplot(4,1,4); plot(sumAlphaZ(1:iT),'-'); title('Sum(Alpha*Z)'); 
   
-  %Alpha = Alpha/mean(gradG(unique(eleNode((eleVol<1 & eleVol>0),:))));
   if any(eleVol<1 & eleVol>0)
       Alpha = Alpha/mean(gradG(unique(eleNode((eleVol<1&eleVol>0),:))));
   end
@@ -167,10 +129,8 @@ PhiExtended = -100.*ones(nely+3,nelx+3,nelz+3);
 PhiExtended(2:end-1,2:end-1,2:end-1) = Phi;
 figure(4);clf,isosurface(PhiExtended,0);
 end
-%plotSurface(X,Y,Z,Phi);
-%clf;
-%patch(fv);isosurface(X,Y,Z,Phi,0);
-%%  Funciones auxiliares
+
+%% 
 function [cont] = auxiliar(nelx,nely,nelz)
 cont = zeros(nelx*nely*nelz,8);
 numElem = 1;
