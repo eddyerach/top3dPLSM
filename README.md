@@ -3,4 +3,4 @@ top3dPLSM is an efficient Matlab code to solve three-dimensional topology optimi
 
 ## Quick Start
 Save the program [top3dPLSM.m](top3dPLSM.m) and start MATLAB in the same directory. The program can be promoted by line
-`top3dPLSM(30,10,2,0.5,3.0,1.2)`
+`top3dPLSM(30,10,2,0.5)`
